@@ -1,9 +1,18 @@
 const express = require("express");
-const { createOrder, getAllOrders, editOrder, updateOrderStatus, getPendingOrders, getRetailerOrders, getSingleOrderDetails } = require("../controllers/order.controller");
-const router = express.Router();
-
+const { 
+    createOrder, 
+    getAllOrders, 
+    editOrder, 
+    updateOrderStatus, 
+    getPendingOrders, 
+    getRetailerOrders, 
+    getSingleOrderDetails 
+} = require("../controllers/order.controller");
 const { protect, authorizeRoles } = require("../middlewares/authMiddleware");
 
+const router = express.Router();
+
+// --- Retailer Routes ---
 // Retailer creates order
 router.post(
     "/create",
@@ -12,7 +21,7 @@ router.post(
     createOrder
 );
 
-//Retailer gets his orders
+// Retailer gets their own orders
 router.get(
     "/my-orders",
     protect,
@@ -20,13 +29,45 @@ router.get(
     getRetailerOrders
 );
 
-// Retailer gets single order details
+// --- Admin Routes ---
+// Admin gets all orders
+router.get(
+    "/",
+    protect,
+    authorizeRoles("admin"),
+    getAllOrders
+);
+
+// Admin gets all pending orders
+router.get(
+    "/pending",
+    protect,
+    authorizeRoles("admin"),
+    getPendingOrders
+);
+
+// Admin edits order before approval
+router.put(
+    "/edit/:orderId",
+    protect,
+    authorizeRoles("admin"),
+    editOrder
+);
+
+// Admin updates status
+router.patch(
+    "/status/:orderId",
+    protect,
+    authorizeRoles("admin"),
+    updateOrderStatus
+);
+
+// --- Shared Routes ---
+// Retailer or Admin gets single order details
 router.get(
     "/:orderId",
     protect,
     getSingleOrderDetails
 );
-
-
 
 module.exports = router;
