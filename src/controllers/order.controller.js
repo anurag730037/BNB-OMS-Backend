@@ -49,7 +49,10 @@ const createOrder = async (req, res) => {
 
 const getAllOrders = async (req, res) => {
     try {
-        const orders = await Order.find()
+        const { retailerId } = req.query;
+        const filter = retailerId ? { retailerId } : {};
+
+        const orders = await Order.find(filter)
             .populate("retailerId")
             .populate("items.productId").
             sort({ createdAt: -1 })
