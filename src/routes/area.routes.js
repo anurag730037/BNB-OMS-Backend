@@ -1,5 +1,5 @@
 const express = require("express");
-const { createArea, getAllAreas } = require("../controllers/area.controller");
+const { createArea, getAllAreas, editArea } = require("../controllers/area.controller");
 const { protect, authorizeRoles } = require("../middlewares/authMiddleware");
 
 const router = express.Router();
