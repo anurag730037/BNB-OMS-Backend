@@ -8,6 +8,7 @@ const orderRoutes = require("./routes/order.routes");
 const productRoutes = require("./routes/product.routes");
 const categoryRoutes = require("./routes/category.routes");
 const subcategoryRoutes = require("./routes/subcategory.routes");
+const areaRoutes = require("./routes/area.routes");
 
 const app = express()
 
@@ -24,6 +25,7 @@ app.use("/api/order", orderRoutes)
 app.use("/api/category", categoryRoutes);
 app.use("/api/product", productRoutes);
 app.use("/api/subcategory", subcategoryRoutes);
+app.use("/api/area", areaRoutes);
 
 app.get("/", (req, res) => {
     res.send("API Working");

@@ -31,9 +31,9 @@ const retailerSchema = new mongoose.Schema({
         trim: true
     },
     area: {
-        type: String,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Area",
         required: true,
-        trim: true
     },
     isActive: {
         type: Boolean,

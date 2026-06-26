@@ -121,7 +121,7 @@ const loginRetailer = async (req, res) => {
 
 const getAllRetailers = async (req, res) => {
     try {
-        const retailers = await Retailer.find().sort({ createdAt: -1 });
+        const retailers = await Retailer.find().populate("area").sort({ createdAt: -1 });
 
         return res.status(200).json({
             success: true,
