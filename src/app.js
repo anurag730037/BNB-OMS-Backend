@@ -11,7 +11,10 @@ const subcategoryRoutes = require("./routes/subcategory.routes");
 
 const app = express()
 
-app.use(cors()); //allows frontend to talk to backend
+app.use(cors({
+    origin: true,
+    credentials: true
+})); //allows frontend to talk to backend with credentials
 app.use(express.json()); //reads JSON request body
 
 app.use("/api/admin", adminRoutes);
