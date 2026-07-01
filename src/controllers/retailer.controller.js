@@ -121,7 +121,24 @@ const loginRetailer = async (req, res) => {
 
 const getAllRetailers = async (req, res) => {
     try {
-        const retailers = await Retailer.find().populate("area").sort({ createdAt: -1 });
+        const { search, area, isActive } = req.query;
+        let query = {};
+        
+        if (search) {
+            query.$or = [
+                { shopName: { $regex: search, $options: "i" } },
+                { ownerName: { $regex: search, $options: "i" } },
+                { phone: { $regex: search, $options: "i" } }
+            ];
+        }
+        if (area) {
+            query.area = area;
+        }
+        if (isActive !== undefined && isActive !== "") {
+            query.isActive = isActive === "true";
+        }
+
+        const retailers = await Retailer.find(query).populate("area").sort({ createdAt: -1 });
 
         return res.status(200).json({
             success: true,

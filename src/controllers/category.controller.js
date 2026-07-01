@@ -43,7 +43,17 @@ const createCategory = async (req, res) => {
 const getAllCategories = async (req, res) => {
 
     try {
-        const categories = await Category.find();
+        const { search, isActive } = req.query;
+        let query = {};
+        
+        if (search) {
+            query.name = { $regex: search, $options: "i" };
+        }
+        if (isActive !== undefined && isActive !== "") {
+            query.isActive = isActive === "true";
+        }
+
+        const categories = await Category.find(query);
 
         return res.status(200).json({
             success: true,

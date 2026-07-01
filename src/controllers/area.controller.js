@@ -19,7 +19,14 @@ const createArea = async (req, res) => {
 // Get All Areas
 const getAllAreas = async (req, res) => {
     try {
-        const areas = await Area.find().sort({ name: 1 });
+        const { search } = req.query;
+        let query = {};
+        
+        if (search) {
+            query.name = { $regex: search, $options: "i" };
+        }
+
+        const areas = await Area.find(query).sort({ name: 1 });
         return res.status(200).json({ success: true, areas });
     } catch (err) {
         return res.status(500).json({ message: err.message });

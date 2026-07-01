@@ -6,7 +6,8 @@ const {
     updateOrderStatus, 
     getPendingOrders, 
     getRetailerOrders, 
-    getSingleOrderDetails 
+    getAdminOrderDetails,
+    getRetailerOrderDetails
 } = require("../controllers/order.controller");
 const { protect, authorizeRoles } = require("../middlewares/authMiddleware");
 
@@ -62,12 +63,22 @@ router.patch(
     updateOrderStatus
 );
 
-// --- Shared Routes ---
-// Retailer or Admin gets single order details
+// --- Admin Specific Routes ---
+// Admin gets single order details
 router.get(
-    "/:orderId",
+    "/admin/:orderId",
     protect,
-    getSingleOrderDetails
+    authorizeRoles("admin"),
+    getAdminOrderDetails
+);
+
+// --- Retailer Specific Routes ---
+// Retailer gets single order details
+router.get(
+    "/retailer/:orderId",
+    protect,
+    authorizeRoles("retailer"),
+    getRetailerOrderDetails
 );
 
 module.exports = router;

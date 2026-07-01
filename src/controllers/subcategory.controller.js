@@ -60,7 +60,20 @@ const createSubcategory = async (req, res) => {
 // Get All Subcategories
 const getAllSubcategories = async (req, res) => {
     try {
-        const subcategories = await SubCategory.find()
+        const { search, categoryId, isActive } = req.query;
+        let query = {};
+        
+        if (search) {
+            query.name = { $regex: search, $options: "i" };
+        }
+        if (categoryId) {
+            query.categoryId = categoryId;
+        }
+        if (isActive !== undefined && isActive !== "") {
+            query.isActive = isActive === "true";
+        }
+
+        const subcategories = await SubCategory.find(query)
             .populate("categoryId");
 
         return res.status(200).json({

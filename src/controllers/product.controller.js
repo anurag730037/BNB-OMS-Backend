@@ -55,14 +55,59 @@ const createProduct = async (req, res) => {
 const getAllProducts = async (req, res) => {
 
     try {
+        const { search, categoryId, subCategoryId, isAvailable } = req.query;
+        let query = {};
+        
+        if (search) {
+            query.name = { $regex: search, $options: "i" };
+        }
+        if (categoryId) {
+            query.categoryId = categoryId;
+        }
+        if (subCategoryId) {
+            query.subCategoryId = subCategoryId;
+        }
+        if (isAvailable !== undefined && isAvailable !== "") {
+            query.isAvailable = isAvailable === "true";
+        }
 
-        const products = await Product.find().populate("categoryId").populate("subCategoryId")
+        const products = await Product.find(query).populate("categoryId", "name").populate("subCategoryId", "name")
 
 
         return res.status(200).json({
             success: true,
             message: "Products fetched successfully",
             products
+        })
+
+    }
+    catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+
+}
+
+const getProductDetails = async (req, res) => {
+
+    try {
+        const { productId } = req.params;
+
+        const product = await Product.findById(productId).populate("categoryId", "name").populate("subCategoryId", "name")
+
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                message: "Product not found"
+            })
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Product fetched successfully",
+            product
         })
 
     }
@@ -139,7 +184,7 @@ const toggleProductAvailability = async (req, res) => {
 
 module.exports = {
     createProduct,
-    getAllProducts,
+    getAllProducts, getProductDetails,
     updateProduct,
     toggleProductAvailability
 };
