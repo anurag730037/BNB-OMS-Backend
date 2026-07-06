@@ -107,26 +107,73 @@ const getBusinessReports = async (req, res) => {
         const yearStart = new Date();
         yearStart.setDate(yearStart.getDate() - 365);
 
-        const getStatsForRange = (startDate) => {
-            return Order.aggregate([
-                { $match: { createdAt: { $gte: startDate } } },
-                {
-                    $group: {
-                        _id: null,
-                        count: { $sum: 1 },
-                        totalKg: { $sum: "$totalkg" },
-                        deliveredKg: { $sum: { $cond: [{ $eq: ["$status", "delivered"] }, "$totalkg", 0] } }
-                    }
+        const orders = await Order.find({ createdAt: { $gte: yearStart } });
+
+        const getTrendData = (filteredOrders, type) => {
+            let count = 0;
+            let totalKg = 0;
+            let deliveredKg = 0;
+
+            let labels = [];
+            if (type === "today") {
+                labels = ["08:00 AM", "10:00 AM", "12:00 PM", "02:00 PM", "04:00 PM", "06:00 PM"];
+            } else if (type === "week") {
+                labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+            } else if (type === "month") {
+                labels = ["Week 1", "Week 2", "Week 3", "Week 4"];
+            } else if (type === "year") {
+                labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            }
+
+            const trend = labels.map(label => ({ label, weight: 0, orders: 0 }));
+
+            filteredOrders.forEach(order => {
+                count++;
+                totalKg += order.totalkg;
+                if (order.status === "delivered") {
+                    deliveredKg += order.totalkg;
                 }
-            ]).then(res => res[0] || { count: 0, totalKg: 0, deliveredKg: 0 });
+
+                // Determine slot index
+                let slotIndex = 0;
+                const date = new Date(order.createdAt);
+                if (type === "today") {
+                    const hour = date.getHours();
+                    if (hour < 10) slotIndex = 0;
+                    else if (hour < 12) slotIndex = 1;
+                    else if (hour < 14) slotIndex = 2;
+                    else if (hour < 16) slotIndex = 3;
+                    else if (hour < 18) slotIndex = 4;
+                    else slotIndex = 5;
+                } else if (type === "week") {
+                    const day = date.getDay(); // 0 is Sun, 1 is Mon...
+                    slotIndex = day === 0 ? 6 : day - 1;
+                } else if (type === "month") {
+                    const diffDays = Math.floor((date - monthStart) / (1000 * 60 * 60 * 24));
+                    slotIndex = Math.floor(diffDays / 7.5);
+                    if (slotIndex > 3) slotIndex = 3;
+                    if (slotIndex < 0) slotIndex = 0;
+                } else if (type === "year") {
+                    slotIndex = date.getMonth(); // 0 is Jan, 11 is Dec
+                }
+
+                if (trend[slotIndex]) {
+                    trend[slotIndex].weight += order.totalkg;
+                    trend[slotIndex].orders += 1;
+                }
+            });
+
+            return { count, totalKg, deliveredKg, trend };
         };
 
-        const [reportToday, reportWeek, reportMonth, reportYear] = await Promise.all([
-            getStatsForRange(todayStart),
-            getStatsForRange(weekStart),
-            getStatsForRange(monthStart),
-            getStatsForRange(yearStart)
-        ]);
+        const todayOrders = orders.filter(o => o.createdAt >= todayStart);
+        const weekOrders = orders.filter(o => o.createdAt >= weekStart);
+        const monthOrders = orders.filter(o => o.createdAt >= monthStart);
+
+        const reportToday = getTrendData(todayOrders, "today");
+        const reportWeek = getTrendData(weekOrders, "week");
+        const reportMonth = getTrendData(monthOrders, "month");
+        const reportYear = getTrendData(orders, "year");
 
         return res.status(200).json({
             success: true,
@@ -187,8 +234,7 @@ const getTopRegions = async (req, res) => {
                     totalKg: 1
                 }
             },
-            { $sort: { orders: -1 } },
-            { $limit: 5 }
+            { $sort: { orders: -1 } }
         ]);
 
         return res.status(200).json({ success: true, topRegions: topRegionsResult });
@@ -368,6 +414,48 @@ const getTopProducts = async (req, res) => {
     }
 };
 
+// 8. Top Retailers (Lifetime total weight volume and order count)
+const getTopRetailers = async (req, res) => {
+    try {
+        const topRetailers = await Order.aggregate([
+            {
+                $group: {
+                    _id: "$retailerId",
+                    totalWeight: { $sum: "$totalkg" },
+                    totalOrders: { $sum: 1 },
+                    lastOrderDate: { $max: "$createdAt" }
+                }
+            },
+            { $sort: { totalWeight: -1 } },
+            { $limit: 5 },
+            {
+                $lookup: {
+                    from: "retailers",
+                    localField: "_id",
+                    foreignField: "_id",
+                    as: "retailer"
+                }
+            },
+            { $unwind: "$retailer" },
+            {
+                $project: {
+                    _id: 1,
+                    shopName: "$retailer.shopName",
+                    ownerName: "$retailer.ownerName",
+                    phone: "$retailer.phone",
+                    totalWeight: 1,
+                    totalOrders: 1,
+                    lastOrderDate: 1
+                }
+            }
+        ]);
+
+        return res.status(200).json({ success: true, topRetailers });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
     getOverviewStats,
     getStatusRatios,
@@ -375,5 +463,6 @@ module.exports = {
     getBusinessReports,
     getTopRegions,
     getOperationalInsights,
-    getTopProducts
+    getTopProducts,
+    getTopRetailers
 };

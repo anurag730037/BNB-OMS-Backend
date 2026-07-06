@@ -6,7 +6,8 @@ const {
     getBusinessReports,
     getTopRegions,
     getOperationalInsights,
-    getTopProducts
+    getTopProducts,
+    getTopRetailers
 } = require("../controllers/dashboard.controller");
 const { protect, authorizeRoles } = require("../middlewares/authMiddleware");
 
@@ -19,5 +20,6 @@ router.get("/reports", protect, authorizeRoles("admin"), getBusinessReports);
 router.get("/top-regions", protect, authorizeRoles("admin"), getTopRegions);
 router.get("/insights", protect, authorizeRoles("admin"), getOperationalInsights);
 router.get("/top-products", protect, authorizeRoles("admin"), getTopProducts);
+router.get("/top-retailers", protect, authorizeRoles("admin"), getTopRetailers);
 
 module.exports = router;
