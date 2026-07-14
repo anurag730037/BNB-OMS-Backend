@@ -1,6 +1,8 @@
 
 const Product = require("../models/product.model");
 const Order = require("../models/order.model");
+const Category = require("../models/category.model");
+
 
 const createProduct = async (req, res) => {
 
@@ -71,14 +73,49 @@ const getAllProducts = async (req, res) => {
             query.isAvailable = isAvailable === "true";
         }
 
-        const products = await Product.find(query).populate("categoryId", "name").populate("subCategoryId", "name")
+                // Check if pagination is requested (if page or limit query parameters are provided)
+        const hasPagination = req.query.page !== undefined || req.query.limit !== undefined || req.query.pagination === "true";
 
+        if (hasPagination) {
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 10;
+            const skip = (page - 1) * limit;
 
-        return res.status(200).json({
-            success: true,
-            message: "Products fetched successfully",
-            products
-        })
+            const [totalProducts, products] = await Promise.all([
+                Product.countDocuments(query),
+                Product.find(query)
+                    .populate("categoryId", "name")
+                    .populate("subCategoryId", "name")
+                    .skip(skip)
+                    .limit(limit)
+                    .sort({ createdAt: -1 })
+            ]);
+
+            const totalPages = Math.ceil(totalProducts / limit);
+
+            return res.status(200).json({
+                success: true,
+                message: "Products fetched successfully with pagination",
+                pagination: {
+                    totalProducts,
+                    totalPages,
+                    currentPage: page,
+                    limit
+                },
+                products
+            });
+        } else {
+            const products = await Product.find(query)
+                .populate("categoryId", "name")
+                .populate("subCategoryId", "name")
+                .sort({ createdAt: -1 });
+
+            return res.status(200).json({
+                success: true,
+                message: "Products fetched successfully",
+                products
+            });
+        }
 
     }
     catch (error) {
@@ -211,7 +248,7 @@ const getPopularProduct = async (req, res) => {
             //  $group (Group by productId and sum quantityKg)
             {
                 $group: {
-                    _id: "items.productId",
+                    _id: "$items.productId",
                     totalQuantity: { $sum: "$items.quantityKg" }
                 }
             },
@@ -266,7 +303,11 @@ const getPopularProduct = async (req, res) => {
             productList = populateAggregation.map(item => ({
                 ...item.product,
                 popularityVolume: item.totalQuantity
-            }))
+            }));
+            productList = await Product.populate(productList, {
+                path: "categoryId",
+                select: "name"
+            });
         }
         else {
             //  Fallback: If no order data, fetch the newest active products
