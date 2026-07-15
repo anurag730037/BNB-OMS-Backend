@@ -117,7 +117,12 @@ const getAllOrders = async (req, res) => {
                 path: "retailerId",
                 populate: { path: "area" }
             })
-            .populate("items.productId")
+            .populate({
+                path: "items.productId",
+                populate: {
+                    path: "categoryId"
+                }
+            })
             .sort({ createdAt: -1 });
 
         // Calculate summary stats
@@ -257,7 +262,12 @@ const getPendingOrders = async (req, res) => {
             status: "pending"
         })
             .populate("retailerId")
-            .populate("items.productId")
+            .populate({
+                path: "items.productId",
+                populate: {
+                    path: "categoryId"
+                }
+            })
             .sort({ createdAt: -1 });
 
         return res.status(200).json({
@@ -278,7 +288,14 @@ const getRetailerOrders = async (req, res) => {
     try {
         const retailerId = req.user.userId;
 
-        const orders = await Order.find({ retailerId }).populate("items.productId").sort({ createdAt: -1 });
+        const orders = await Order.find({ retailerId })
+            .populate({
+                path: "items.productId",
+                populate: {
+                    path: "categoryId"
+                }
+            })
+            .sort({ createdAt: -1 });
 
         return res.status(200).json({
             success: true,
@@ -300,7 +317,24 @@ const getAdminOrderDetails = async (req, res) => {
     try {
         const { orderId } = req.params;
 
-        const order = await Order.findById(orderId).populate("retailerId").populate("items.productId");
+        const query = {
+            $or: [
+                { orderId: orderId }
+            ]
+        };
+
+        if (orderId.match(/^[0-9a-fA-F]{24}$/)) {
+            query.$or.push({ _id: orderId });
+        }
+
+        const order = await Order.findOne(query)
+            .populate("retailerId")
+            .populate({
+                path: "items.productId",
+                populate: {
+                    path: "categoryId"
+                }
+            });
 
         if (!order) {
             return res.status(404).json({
@@ -327,7 +361,24 @@ const getRetailerOrderDetails = async (req, res) => {
         const { orderId } = req.params;
         const loggedInUserId = req.user.userId;
 
-        const order = await Order.findById(orderId).populate("retailerId").populate("items.productId");
+        const query = {
+            $or: [
+                { orderId: orderId }
+            ]
+        };
+
+        if (orderId.match(/^[0-9a-fA-F]{24}$/)) {
+            query.$or.push({ _id: orderId });
+        }
+
+        const order = await Order.findOne(query)
+            .populate("retailerId")
+            .populate({
+                path: "items.productId",
+                populate: {
+                    path: "categoryId"
+                }
+            });
 
         if (!order) {
             return res.status(404).json({
