@@ -72,19 +72,28 @@ const getAllOrders = async (req, res) => {
             }
 
             if (search) {
-                // NOTE: fixed "$option" to "$options"
                 retailerFilter.$or = [
                     { shopName: { $regex: search, $options: "i" } },
                     { ownerName: { $regex: search, $options: "i" } }
                 ];
+
+                // Fetch matching retailers
+                const matchingRetailers = await Retailer.find(retailerFilter).select("_id");
+                const matchingIds = matchingRetailers.map(r => r._id);
+
+                // Match orderId OR retailerId
+                filter.$or = [
+                    { orderId: { $regex: search, $options: "i" } },
+                    { retailerId: { $in: matchingIds } }
+                ];
+            } else {
+                // Fetch matching retailers
+                const matchingRetailers = await Retailer.find(retailerFilter).select("_id");
+                const matchingIds = matchingRetailers.map(r => r._id);
+
+                // Assign the list of matching retailer IDs to the order filter
+                filter.retailerId = { $in: matchingIds };
             }
-
-            // Fetch matching retailers
-            const matchingRetailers = await Retailer.find(retailerFilter).select("_id");
-            const matchingIds = matchingRetailers.map(r => r._id);
-
-            // Assign the list of matching retailer IDs to the order filter
-            filter.retailerId = { $in: matchingIds };
         }
 
         // 3. Date Range Filter
