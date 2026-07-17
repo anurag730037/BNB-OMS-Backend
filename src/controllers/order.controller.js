@@ -1,5 +1,6 @@
 const Order = require("../models/order.model");
 const Retailer = require("../models/retailer.model");
+const { broadcast } = require("../utils/websocket");
 
 const createOrder = async (req, res) => {
 
@@ -31,6 +32,13 @@ const createOrder = async (req, res) => {
             totalkg
         })
 
+
+        // 📢 Broadcast a real-time event to all connected WebSocket clients (the Admins)
+
+        broadcast({
+            event: "NEW_ORDER",
+            order: order
+        })
 
         return res.status(201).json({
             success: true,
