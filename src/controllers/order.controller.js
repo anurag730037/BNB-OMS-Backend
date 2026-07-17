@@ -32,12 +32,14 @@ const createOrder = async (req, res) => {
             totalkg
         })
 
+        // Populate retailer details for the broadcast
+        const populatedOrder = await Order.findById(order._id).populate("retailerId");
 
         // 📢 Broadcast a real-time event to all connected WebSocket clients (the Admins)
 
         broadcast({
             event: "NEW_ORDER",
-            order: order
+            order: populatedOrder || order
         })
 
         return res.status(201).json({
