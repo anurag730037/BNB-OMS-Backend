@@ -29,7 +29,15 @@ const createOrder = async (req, res) => {
         const order = await Order.create({
             retailerId,
             items,
-            totalkg
+            totalkg,
+            statusHistory: [
+                {
+                    fromStatus: null,
+                    toStatus: "pending",
+                    changedAt: new Date(),
+                    note: "Order Received"
+                }
+            ]
         })
 
         // Populate retailer details for the broadcast
@@ -193,16 +201,32 @@ const updateOrderStatus = async (req, res) => {
             });
         }
 
-        const order = await Order.findByIdAndUpdate(orderId,
-            { status }, { new: true }
-        )
+        const existingOrder = await Order.findById(orderId);
 
-        if (!order) {
+        if (!existingOrder) {
             return res.status(404).json({
                 success: false,
                 message: "Order not found"
             });
         }
+
+        const updateOps = { status };
+
+        if (existingOrder.status !== status) {
+            updateOps.$push = {
+                statusHistory: {
+                    fromStatus: existingOrder.status,
+                    toStatus: status,
+                    changedAt: new Date()
+                }
+            };
+        }
+
+        const order = await Order.findByIdAndUpdate(
+            orderId,
+            updateOps,
+            { new: true }
+        );
 
         return res.status(200).json({
             success: true,

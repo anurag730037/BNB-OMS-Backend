@@ -61,7 +61,28 @@ const orderSchema = new mongoose.Schema({
     totalkg: {
         type: Number,
         required: true
-    }
+    },
+
+    statusHistory: [
+        {
+            fromStatus: {
+                type: String,
+                default: null
+            },
+            toStatus: {
+                type: String,
+                required: true
+            },
+            changedAt: {
+                type: Date,
+                default: Date.now
+            },
+            note: {
+                type: String,
+                default: ""
+            }
+        }
+    ]
 }, {
     timestamps: true
 })
