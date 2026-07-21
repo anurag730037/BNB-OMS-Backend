@@ -1,5 +1,7 @@
 
 const Category = require("../models/category.model");
+const SubCategory = require("../models/subcategory.model");
+const Product = require("../models/product.model");
 
 const createCategory = async (req, res) => {
 
@@ -122,6 +124,18 @@ const deleteCategory = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 message: "Category not found"
+            });
+        }
+
+        const [hasSubcategories, hasProducts] = await Promise.all([
+            SubCategory.exists({ categoryId }),
+            Product.exists({ categoryId })
+        ]);
+
+        if (hasSubcategories || hasProducts) {
+            return res.status(400).json({
+                success: false,
+                message: "Cannot delete category because products/subcategories are associated with it"
             });
         }
 

@@ -1,5 +1,6 @@
 const SubCategory = require("../models/subcategory.model");
 const Category = require("../models/category.model");
+const Product = require("../models/product.model");
 
 const createSubcategory = async (req, res) => {
 
@@ -151,9 +152,46 @@ const toggleSubcategoryStatus = async (req, res) => {
     }
 };
 
+// Delete Subcategory
+const deleteSubcategory = async (req, res) => {
+    try {
+        const { subcategoryId } = req.params;
+
+        const subcategory = await SubCategory.findById(subcategoryId);
+
+        if (!subcategory) {
+            return res.status(404).json({
+                success: false,
+                message: "Subcategory not found"
+            });
+        }
+
+        const hasProducts = await Product.exists({ subCategoryId: subcategoryId });
+        if (hasProducts) {
+            return res.status(400).json({
+                success: false,
+                message: "Cannot delete subcategory because products are associated with it"
+            });
+        }
+
+        await subcategory.deleteOne();
+
+        return res.status(200).json({
+            success: true,
+            message: "Subcategory deleted successfully"
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
 module.exports = {
     createSubcategory,
     getAllSubcategories,
     updateSubcategory,
-    toggleSubcategoryStatus
+    toggleSubcategoryStatus,
+    deleteSubcategory
 };

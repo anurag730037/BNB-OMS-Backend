@@ -41,7 +41,7 @@ const createOrder = async (req, res) => {
         })
 
         // Populate retailer details for the broadcast
-        const populatedOrder = await Order.findById(order._id).populate("retailerId");
+        const populatedOrder = await Order.findById(order._id).populate("retailerId", "shopName ownerName phone address");
 
         // 📢 Broadcast a real-time event to all connected WebSocket clients (the Admins)
 
@@ -133,12 +133,15 @@ const getAllOrders = async (req, res) => {
         const orders = await Order.find(filter)
             .populate({
                 path: "retailerId",
-                populate: { path: "area" }
+                select: "shopName ownerName phone address",
+                populate: { path: "area", select: "name" }
             })
             .populate({
                 path: "items.productId",
+                select: "name images price showPrice availableSizes isAvailable categoryId subCategoryId",
                 populate: {
-                    path: "categoryId"
+                    path: "categoryId",
+                    select: "name"
                 }
             })
             .sort({ createdAt: -1 });
@@ -295,11 +298,13 @@ const getPendingOrders = async (req, res) => {
         const orders = await Order.find({
             status: "pending"
         })
-            .populate("retailerId")
+            .populate("retailerId", "shopName ownerName phone address")
             .populate({
                 path: "items.productId",
+                select: "name images price showPrice availableSizes isAvailable categoryId subCategoryId",
                 populate: {
-                    path: "categoryId"
+                    path: "categoryId",
+                    select: "name"
                 }
             })
             .sort({ createdAt: -1 });
@@ -325,8 +330,10 @@ const getRetailerOrders = async (req, res) => {
         const orders = await Order.find({ retailerId })
             .populate({
                 path: "items.productId",
+                select: "name images price showPrice availableSizes isAvailable categoryId subCategoryId",
                 populate: {
-                    path: "categoryId"
+                    path: "categoryId",
+                    select: "name"
                 }
             })
             .sort({ createdAt: -1 });
@@ -362,11 +369,13 @@ const getAdminOrderDetails = async (req, res) => {
         }
 
         const order = await Order.findOne(query)
-            .populate("retailerId")
+            .populate("retailerId", "shopName ownerName phone address")
             .populate({
                 path: "items.productId",
+                select: "name images price showPrice availableSizes isAvailable categoryId subCategoryId",
                 populate: {
-                    path: "categoryId"
+                    path: "categoryId",
+                    select: "name"
                 }
             });
 
@@ -406,11 +415,13 @@ const getRetailerOrderDetails = async (req, res) => {
         }
 
         const order = await Order.findOne(query)
-            .populate("retailerId")
+            .populate("retailerId", "shopName ownerName phone address")
             .populate({
                 path: "items.productId",
+                select: "name images price showPrice availableSizes isAvailable categoryId subCategoryId",
                 populate: {
-                    path: "categoryId"
+                    path: "categoryId",
+                    select: "name"
                 }
             });
 

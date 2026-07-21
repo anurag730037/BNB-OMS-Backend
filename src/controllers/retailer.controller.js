@@ -34,6 +34,7 @@ const registerRetailer = async (req, res) => {
 
         const retailerResponse = retailer.toObject();
         delete retailerResponse.password;
+        delete retailerResponse.__v;
 
         return res.status(201).json({
             success: true,
@@ -74,7 +75,7 @@ const loginRetailer = async (req, res) => {
         if (!retailer.isActive) {
             return res.status(400).json({
                 success: false,
-                message: "This Retailer Account is disabled",
+                message: "This Account is disabled",
             })
         }
 
@@ -100,6 +101,7 @@ const loginRetailer = async (req, res) => {
         // Remove password
         const retailerResponse = retailer.toObject();
         delete retailerResponse.password;
+        delete retailerResponse.__v;
 
         return res.status(200).json({
             success: true,
@@ -123,7 +125,7 @@ const getAllRetailers = async (req, res) => {
     try {
         const { search, area, isActive } = req.query;
         let query = {};
-        
+
         if (search) {
             query.$or = [
                 { shopName: { $regex: search, $options: "i" } },
@@ -138,7 +140,7 @@ const getAllRetailers = async (req, res) => {
             query.isActive = isActive === "true";
         }
 
-        const retailers = await Retailer.find(query).populate("area").sort({ createdAt: -1 });
+        const retailers = await Retailer.find(query).select("-password -__v").populate("area").sort({ createdAt: -1 });
 
         return res.status(200).json({
             success: true,
@@ -162,7 +164,7 @@ const getSingleRetailer = async (req, res) => {
 
         const { userId, role } = req.user;
 
-        const retailer = await Retailer.findById(retailerId);
+        const retailer = await Retailer.findById(retailerId).populate("area", "name");
 
         if (!retailer) {
             return res.status(404).json({
@@ -173,6 +175,7 @@ const getSingleRetailer = async (req, res) => {
 
         const retailerResponse = retailer.toObject();
         delete retailerResponse.password;
+        delete retailerResponse.__v;
 
         if (role === "retailer") {
             if (retailerResponse._id.toString() !== userId) {
@@ -191,7 +194,7 @@ const getSingleRetailer = async (req, res) => {
         if (role === "admin") {
             return res.status(200).json({
                 success: true,
-                retailer
+                retailer: retailerResponse
             });
         }
 
@@ -228,10 +231,14 @@ const updateRetailer = async (req, res) => {
 
         await retailer.save();
 
+        const retailerResponse = retailer.toObject();
+        delete retailerResponse.password;
+        delete retailerResponse.__v;
+
         return res.status(200).json({
             success: true,
             message: "Retailer updated successfully",
-            retailer
+            retailer: retailerResponse
         });
 
     }
@@ -260,10 +267,14 @@ const toggleRetailerStatus = async (req, res) => {
 
         await retailer.save();
 
+        const retailerResponse = retailer.toObject();
+        delete retailerResponse.password;
+        delete retailerResponse.__v;
+
         return res.status(200).json({
             success: true,
             message: `Retailer ${retailer.isActive ? "activated" : "deactivated"} successfully`,
-            retailer
+            retailer: retailerResponse
         });
     }
     catch (error) {

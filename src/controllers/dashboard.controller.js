@@ -78,11 +78,11 @@ const getRecentOrders = async (req, res) => {
     try {
         const [recentOrders, pendingOrdersList] = await Promise.all([
             Order.find()
-                .populate("retailerId")
+                .populate("retailerId", "shopName ownerName phone address")
                 .sort({ createdAt: -1 })
                 .limit(5),
             Order.find({ status: "pending" })
-                .populate("retailerId")
+                .populate("retailerId", "shopName ownerName phone address")
                 .sort({ createdAt: -1 })
         ]);
 
