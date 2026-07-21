@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken")
+const Retailer = require("../models/retailer.model");
 
 const protect = async (req, res, next) => {
     try {
@@ -18,11 +19,37 @@ const protect = async (req, res, next) => {
             });
         }
 
-        // this will decode the token and get userId
-
-
-
+        // Decode token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        // If user is a retailer, check DB to ensure account is active and token is not invalidated by password change
+        if (decoded.role === "retailer") {
+            const retailer = await Retailer.findById(decoded.userId).select("isActive passwordChangedAt");
+
+            if (!retailer) {
+                return res.status(401).json({
+                    success: false,
+                    message: "Account no longer exists",
+                });
+            }
+
+            if (!retailer.isActive) {
+                return res.status(401).json({
+                    success: false,
+                    message: "Account is disabled. Please contact support.",
+                });
+            }
+
+            if (retailer.passwordChangedAt) {
+                const passwordChangedTimestamp = parseInt(retailer.passwordChangedAt.getTime() / 1000, 10);
+                if (decoded.iat < passwordChangedTimestamp) {
+                    return res.status(401).json({
+                        success: false,
+                        message: "Password was changed recently. Please log in again.",
+                    });
+                }
+            }
+        }
 
         req.user = decoded;
 

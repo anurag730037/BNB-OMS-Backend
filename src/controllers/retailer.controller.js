@@ -285,11 +285,121 @@ const toggleRetailerStatus = async (req, res) => {
     }
 }
 
+// Change Password for Logged-In Retailer
+const changePassword = async (req, res) => {
+    try {
+        const { oldPassword, newPassword } = req.body;
+        const retailerId = req.user.userId;
+
+        if (!oldPassword || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Both old and new passwords are required"
+            });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: "New password must be at least 6 characters long"
+            });
+        }
+
+        const retailer = await Retailer.findById(retailerId);
+        if (!retailer) {
+            return res.status(404).json({
+                success: false,
+                message: "Retailer not found"
+            });
+        }
+
+        // Compare current password
+        const isMatch = await bcrypt.compare(oldPassword, retailer.password);
+        if (!isMatch) {
+            return res.status(400).json({
+                success: false,
+                message: "Incorrect current password"
+            });
+        }
+
+        // Hash new password and save
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        retailer.password = hashedPassword;
+        retailer.passwordChangedAt = new Date();
+        await retailer.save();
+
+        // Issue a fresh token for current device (issued after passwordChangedAt)
+        const token = jwt.sign({
+            userId: retailer._id,
+            role: "retailer",
+            phone: retailer.phone
+        }, process.env.JWT_SECRET);
+
+        return res.status(200).json({
+            success: true,
+            message: "Password changed successfully",
+            token
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// Admin Reset Retailer Password (No old password required)
+const adminResetRetailerPassword = async (req, res) => {
+    try {
+        const { retailerId } = req.params;
+        const { newPassword } = req.body;
+
+        if (!newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "New password is required"
+            });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: "New password must be at least 6 characters long"
+            });
+        }
+
+        const retailer = await Retailer.findById(retailerId);
+        if (!retailer) {
+            return res.status(404).json({
+                success: false,
+                message: "Retailer not found"
+            });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        retailer.password = hashedPassword;
+        retailer.passwordChangedAt = new Date();
+        await retailer.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Retailer password reset successfully"
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
 module.exports = {
     registerRetailer,
     loginRetailer,
     getAllRetailers,
     getSingleRetailer,
     updateRetailer,
-    toggleRetailerStatus
+    toggleRetailerStatus,
+    changePassword,
+    adminResetRetailerPassword
 }

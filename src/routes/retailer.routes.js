@@ -1,5 +1,5 @@
 const express = require("express");
-const { registerRetailer, loginRetailer, getSingleRetailer, getAllRetailers, toggleRetailerStatus, updateRetailer } = require("../controllers/retailer.controller");
+const { registerRetailer, loginRetailer, getSingleRetailer, getAllRetailers, toggleRetailerStatus, updateRetailer, changePassword, adminResetRetailerPassword } = require("../controllers/retailer.controller");
 const { protect, authorizeRoles } = require("../middlewares/authMiddleware");
 
 const router = express.Router();
@@ -10,6 +10,9 @@ router.post("/register", protect, authorizeRoles("admin"), registerRetailer);
 // Public route for retailers to log in
 router.post("/login", loginRetailer);
 
+// Change password by logged-in retailer
+router.patch("/change-password", protect, changePassword);
+
 // Retailer update by admin
 router.put("/:retailerId",
     protect,
@@ -17,11 +20,18 @@ router.put("/:retailerId",
     updateRetailer
 );
 
-//Toggle Retailer Status by admin
+// Toggle Retailer Status by admin
 router.patch("/:retailerId/toggle-status",
     protect,
     authorizeRoles("admin"),
     toggleRetailerStatus
+);
+
+// Admin Reset Retailer Password (No old password required)
+router.patch("/:retailerId/reset-password",
+    protect,
+    authorizeRoles("admin"),
+    adminResetRetailerPassword
 );
 
 // Get all retailers by admin

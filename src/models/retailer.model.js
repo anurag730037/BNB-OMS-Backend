@@ -38,6 +38,9 @@ const retailerSchema = new mongoose.Schema({
     isActive: {
         type: Boolean,
         default: true
+    },
+    passwordChangedAt: {
+        type: Date
     }
 }, {
     timestamps: true,
