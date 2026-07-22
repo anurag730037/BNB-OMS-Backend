@@ -1,6 +1,7 @@
 const admin = require("firebase-admin");
+const { getApps } = require("firebase-admin/app"); // Import getApps
 
-if (admin.apps.length === 0) {
+if (getApps().length === 0) { // Check length using getApps()
     let serviceAccount;
 
     if (process.env.FIREBASE_SERVICE_ACCOUNT) {
