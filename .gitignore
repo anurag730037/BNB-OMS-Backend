@@ -1,3 +1,4 @@
 node_modules/
 .env
 pass.txt
+src/config/firebase/firebase-adminsdk.json

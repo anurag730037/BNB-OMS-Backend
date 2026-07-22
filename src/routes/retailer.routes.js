@@ -1,5 +1,5 @@
 const express = require("express");
-const { registerRetailer, loginRetailer, getSingleRetailer, getAllRetailers, toggleRetailerStatus, updateRetailer, changePassword, adminResetRetailerPassword } = require("../controllers/retailer.controller");
+const { registerRetailer, loginRetailer, getSingleRetailer, getAllRetailers, toggleRetailerStatus, updateRetailer, changePassword, adminResetRetailerPassword, updateDeviceToken } = require("../controllers/retailer.controller");
 const { protect, authorizeRoles } = require("../middlewares/authMiddleware");
 
 const router = express.Router();
@@ -9,6 +9,9 @@ router.post("/register", protect, authorizeRoles("admin"), registerRetailer);
 
 // Public route for retailers to log in
 router.post("/login", loginRetailer);
+
+// Protected route for retailers to register/update device FCM token
+router.post("/device-token", protect, updateDeviceToken);
 
 // Change password by logged-in retailer
 router.patch("/change-password", protect, changePassword);

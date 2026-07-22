@@ -393,6 +393,44 @@ const adminResetRetailerPassword = async (req, res) => {
     }
 };
 
+
+const updateDeviceToken = async (req, res) => {
+    try {
+        const { fcmToken } = req.body;
+
+        if (!fcmToken) {
+            return res.status(400).json({
+                success: false,
+                message: "FCM token is required"
+            })
+        }
+
+        // Update current logged-in retailer's token using ID from auth middleware
+
+        const retailer = await Retailer.findByIdAndUpdate(
+            req.user.userId, { fcmToken }, { new: true }
+        )
+
+        if (!retailer) {
+            return res.status(404).json({
+                success: false,
+                message: "Retailer not found"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "FCM Token Updated"
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+}
+
 module.exports = {
     registerRetailer,
     loginRetailer,
@@ -401,5 +439,6 @@ module.exports = {
     updateRetailer,
     toggleRetailerStatus,
     changePassword,
-    adminResetRetailerPassword
+    adminResetRetailerPassword,
+    updateDeviceToken
 }

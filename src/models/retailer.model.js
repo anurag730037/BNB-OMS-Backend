@@ -35,6 +35,13 @@ const retailerSchema = new mongoose.Schema({
         ref: "Area",
         required: true,
     },
+    fcmToken: {
+        type: String,
+        default: null
+    },
+    lastNotificationAt: {
+        type: Date
+    },
     isActive: {
         type: Boolean,
         default: true
