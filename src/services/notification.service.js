@@ -1,5 +1,8 @@
-const admin = require("../config/firebase/firebase");
+const { getMessaging } = require("firebase-admin/messaging");
+const firebaseApp = require("../config/firebase/firebase");
 const Retailer = require("../models/retailer.model");
+
+const messaging = getMessaging(firebaseApp);
 
 const buildMessagePayload = ({ title, body, image, data, priority, sound }) => {
     const payload = {
@@ -79,7 +82,7 @@ const sendToSingleRetailer = async (retailerId, payload) => {
             ...buildMessagePayload(payload)
         };
 
-        const response = await admin.messaging().send(message);
+        const response = await messaging.send(message);
 
         // Update last notification timestamp
         retailer.lastNotificationAt = new Date();
@@ -136,7 +139,7 @@ const sendToMultipleRetailers = async (retailerIds, payload) => {
         };
 
         // 2. Call Notification Service
-        const response = await admin.messaging().sendEachForMulticast(message);
+        const response = await messaging.sendEachForMulticast(message);
 
         // 3. Update timestamps
         await Retailer.updateMany(
@@ -179,7 +182,7 @@ const sendToAllRetailers = async (payload) => {
             ...buildMessagePayload(payload)
         };
 
-        const response = await admin.messaging().sendEachForMulticast(message);
+        const response = await messaging.sendEachForMulticast(message);
 
         await Retailer.updateMany(
             { fcmToken: { $ne: null } },
