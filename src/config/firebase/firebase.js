@@ -1,5 +1,5 @@
 const admin = require("firebase-admin");
-const { getApps } = require("firebase-admin/app"); // Import getApps
+const { getApps, initializeApp, cert } = require("firebase-admin/app"); // Import getApps, initializeApp, and cert
 
 if (getApps().length === 0) { // Check length using getApps()
     let serviceAccount;
@@ -20,8 +20,8 @@ if (getApps().length === 0) { // Check length using getApps()
     }
 
     if (serviceAccount) {
-        admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount),
+        initializeApp({
+            credential: cert(serviceAccount),
         });
     } else {
         console.warn("Firebase Admin SDK failed to initialize: No credentials found.");
