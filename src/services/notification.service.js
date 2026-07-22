@@ -1,27 +1,5 @@
 const admin = require("../config/firebase/firebase");
-
-const sendNotification = async ({ token, title, body, data = {} }) => {
-
-    try {
-        const message = {
-            token,
-            notification: {
-                title,
-                body,
-            },
-            data,
-        };
-
-        const response = await admin.messaging().send(message);
-        console.log("Notification Sent:", response);
-
-        return response;
-    }
-    catch (error) {
-        console.error("Notification Error:", error);
-        throw error;
-    }
-}
+const Retailer = require("../models/retailer.model");
 
 const buildMessagePayload = ({ title, body, image, data, priority, sound }) => {
     const payload = {
@@ -61,34 +39,78 @@ const buildMessagePayload = ({ title, body, image, data, priority, sound }) => {
 };
 
 /**
- * Send notification to a single retailer by their ID
+ * Handle invalid/expired tokens from Multicast Batch Responses
+ */
+const cleanupExpiredTokens = async (tokens, responses) => {
+    const tokensToRemove = [];
+    responses.forEach((resp, idx) => {
+        if (!resp.success && resp.error) {
+            const code = resp.error.code;
+            if (
+                code === "messaging/registration-token-not-registered" ||
+                code === "messaging/invalid-registration-token"
+            ) {
+                tokensToRemove.push(tokens[idx]);
+            }
+        }
+    });
+
+    if (tokensToRemove.length > 0) {
+        await Retailer.updateMany(
+            { fcmToken: { $in: tokensToRemove } },
+            { $set: { fcmToken: null } }
+        );
+        console.log(`[FCM Cleanup] Cleared ${tokensToRemove.length} expired FCM tokens.`);
+    }
+};
+
+/**
+ * Send notification to a single retailer
  */
 const sendToSingleRetailer = async (retailerId, payload) => {
     try {
         const retailer = await Retailer.findById(retailerId);
         if (!retailer || !retailer.fcmToken) {
-            console.log(`No active FCM token found for retailer: ${retailerId}`);
-            return null;
+            return { successCount: 0, failureCount: 1, responses: [{ success: false, error: { message: "No FCM Token found" } }] };
         }
+
         const message = {
             token: retailer.fcmToken,
             ...buildMessagePayload(payload)
         };
+
         const response = await admin.messaging().send(message);
 
-        // Update notification timestamp
+        // Update last notification timestamp
         retailer.lastNotificationAt = new Date();
         await retailer.save();
-        console.log(`Notification sent to retailer ${retailerId}:`, response);
-        return response;
+
+        return {
+            successCount: 1,
+            failureCount: 0,
+            firebaseResponse: response
+        };
     } catch (error) {
         console.error(`Error sending notification to retailer ${retailerId}:`, error);
-        throw error;
+
+        // Remove token if expired
+        if (
+            error.code === "messaging/registration-token-not-registered" ||
+            error.code === "messaging/invalid-registration-token"
+        ) {
+            await Retailer.findByIdAndUpdate(retailerId, { fcmToken: null });
+        }
+
+        return {
+            successCount: 0,
+            failureCount: 1,
+            firebaseResponse: error
+        };
     }
 };
 
 /**
- * Send notification to multiple retailers by their IDs
+ * Send notification to multiple retailers (deduplicates tokens)
  */
 const sendToMultipleRetailers = async (retailerIds, payload) => {
     try {
@@ -96,23 +118,40 @@ const sendToMultipleRetailers = async (retailerIds, payload) => {
             _id: { $in: retailerIds },
             fcmToken: { $ne: null }
         });
-        const tokens = retailers.map(r => r.fcmToken);
+
+        // 1. Remove duplicate tokens
+        const tokens = Array.from(new Set(retailers.map(r => r.fcmToken)));
+
         if (tokens.length === 0) {
-            console.log("No valid FCM tokens found for the provided retailers.");
-            return null;
+            return {
+                successCount: 0,
+                failureCount: retailerIds.length,
+                firebaseResponse: { message: "No valid FCM tokens found for target users" }
+            };
         }
+
         const message = {
             tokens,
             ...buildMessagePayload(payload)
         };
+
+        // 2. Call Notification Service
         const response = await admin.messaging().sendEachForMulticast(message);
-        // Update timestamps for matching retailers
+
+        // 3. Update timestamps
         await Retailer.updateMany(
             { _id: { $in: retailers.map(r => r._id) } },
             { $set: { lastNotificationAt: new Date() } }
         );
-        console.log("Multicast notifications status:", response);
-        return response;
+
+        // 4. Handle invalid/expired tokens asynchronously
+        await cleanupExpiredTokens(tokens, response.responses);
+
+        return {
+            successCount: response.successCount,
+            failureCount: response.failureCount,
+            firebaseResponse: response
+        };
     } catch (error) {
         console.error("Error sending multicast notifications:", error);
         throw error;
@@ -120,28 +159,40 @@ const sendToMultipleRetailers = async (retailerIds, payload) => {
 };
 
 /**
- * Send notification to all active retailers
+ * Send notification to every active retailer
  */
 const sendToAllRetailers = async (payload) => {
     try {
         const retailers = await Retailer.find({ fcmToken: { $ne: null } });
-        const tokens = retailers.map(r => r.fcmToken);
+        const tokens = Array.from(new Set(retailers.map(r => r.fcmToken)));
+
         if (tokens.length === 0) {
-            console.log("No active FCM tokens found in the database.");
-            return null;
+            return {
+                successCount: 0,
+                failureCount: 0,
+                firebaseResponse: { message: "No FCM tokens found in DB" }
+            };
         }
+
         const message = {
             tokens,
             ...buildMessagePayload(payload)
         };
+
         const response = await admin.messaging().sendEachForMulticast(message);
-        // Update timestamps for all target retailers
+
         await Retailer.updateMany(
             { fcmToken: { $ne: null } },
             { $set: { lastNotificationAt: new Date() } }
         );
-        console.log("Global notifications status:", response);
-        return response;
+
+        await cleanupExpiredTokens(tokens, response.responses);
+
+        return {
+            successCount: response.successCount,
+            failureCount: response.failureCount,
+            firebaseResponse: response
+        };
     } catch (error) {
         console.error("Error sending global notifications:", error);
         throw error;
@@ -149,9 +200,7 @@ const sendToAllRetailers = async (payload) => {
 };
 
 module.exports = {
-    sendNotification,
     sendToSingleRetailer,
     sendToMultipleRetailers,
     sendToAllRetailers
 };
-
