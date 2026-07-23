@@ -13,17 +13,19 @@ const buildMessagePayload = ({ title, body, image, data, priority, sound }) => {
         data: data || {},
     };
     if (image) {
-        payload.notification.imageUrl = image;
+        payload.notification.image = image;
     }
     // Android configuration
     payload.android = {
         priority: priority || "high",
         notification: {
             sound: sound || "default",
+            channelId: "default",
+            notificationPriority: "PRIORITY_HIGH",
         }
     };
     if (image) {
-        payload.android.notification.imageUrl = image;
+        payload.android.notification.image = image;
     }
     // APNs (iOS) configuration
     payload.apns = {
@@ -35,7 +37,7 @@ const buildMessagePayload = ({ title, body, image, data, priority, sound }) => {
     };
     if (image) {
         payload.apns.fcmOptions = {
-            imageUrl: image
+            image: image
         };
     }
     return payload;
