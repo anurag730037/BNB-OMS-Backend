@@ -405,8 +405,13 @@ const updateDeviceToken = async (req, res) => {
             })
         }
 
-        // Update current logged-in retailer's token using ID from auth middleware
+        // 1. Remove this token from any other retailers to prevent duplicate deliveries
+        await Retailer.updateMany(
+            { fcmToken, _id: { $ne: req.user.userId } },
+            { $set: { fcmToken: null } }
+        );
 
+        // 2. Update current logged-in retailer's token using ID from auth middleware
         const retailer = await Retailer.findByIdAndUpdate(
             req.user.userId, { fcmToken }, { new: true }
         )

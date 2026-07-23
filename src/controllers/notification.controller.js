@@ -139,6 +139,84 @@ const sendAdminNotification = async (req, res) => {
     }
 }
 
+const Admin = require("../models/admin.model");
+
+const getNotificationHistory = async (req, res) => {
+    try {
+        const { search, targetType, startDate, endDate, sentBy, page = 1, limit = 10 } = req.query;
+
+        let query = {};
+
+        // 1. Search filter in Title and Body
+        if (search) {
+            query.$or = [
+                { title: { $regex: search, $options: "i" } },
+                { body: { $regex: search, $options: "i" } }
+            ];
+        }
+
+        // 2. Target Type filter
+        if (targetType && targetType !== "") {
+            query.targetType = targetType;
+        }
+
+        // 3. Date Range filter
+        if (startDate || endDate) {
+            query.createdAt = {};
+            if (startDate) {
+                query.createdAt.$gte = new Date(startDate);
+            }
+            if (endDate) {
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999);
+                query.createdAt.$lte = end;
+            }
+        }
+
+        // 4. Admin Sender filter
+        if (sentBy && sentBy !== "") {
+            if (sentBy === "system") {
+                query.sentBy = null;
+            } else {
+                query.sentBy = sentBy;
+            }
+        }
+
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        // Fetch paginated notification history logs
+        const totalCount = await Notification.countDocuments(query);
+        const notifications = await Notification.find(query)
+            .populate("sentBy", "name email")
+            .populate("area", "name")
+            .populate("retailer", "shopName ownerName phone")
+            .populate("selectedRetailers", "shopName ownerName phone")
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(parseInt(limit));
+
+        // Fetch the unique list of admins who have ever sent notifications
+        const sentByAdmins = await Notification.distinct("sentBy", { sentBy: { $ne: null } });
+        const adminsList = await Admin.find({ _id: { $in: sentByAdmins } }).select("name email");
+
+        return res.status(200).json({
+            success: true,
+            totalCount,
+            totalPages: Math.ceil(totalCount / parseInt(limit)),
+            currentPage: parseInt(page),
+            adminsList,
+            notifications
+        });
+    } catch (error) {
+        console.error("Error in getNotificationHistory controller:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Failed to fetch notification history logs."
+        });
+    }
+}
+
 module.exports = {
-    sendAdminNotification
+    sendAdminNotification,
+    getNotificationHistory
 };
