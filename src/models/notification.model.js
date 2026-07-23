@@ -31,7 +31,8 @@ const notificationSchema = new mongoose.Schema({
     sentBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Admin",
-        required: true
+        required: false,
+        default: null,
     },
     area: {
         type: mongoose.Schema.Types.ObjectId,

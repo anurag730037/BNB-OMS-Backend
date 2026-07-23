@@ -1,6 +1,8 @@
 const Order = require("../models/order.model");
 const Retailer = require("../models/retailer.model");
 const { broadcast } = require("../utils/websocket");
+const { sendOrderStatusNotification } = require("../services/automaticNotification.service");
+
 
 const createOrder = async (req, res) => {
 
@@ -230,6 +232,12 @@ const updateOrderStatus = async (req, res) => {
             updateOps,
             { new: true }
         );
+
+        // 📢 Dispatch automatic push notification for status transitions
+
+        sendOrderStatusNotification(orderId, status).catch(err => {
+            console.error("Failed to dispatch automated order status notification:", err);
+        })
 
         return res.status(200).json({
             success: true,
