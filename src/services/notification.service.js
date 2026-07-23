@@ -20,7 +20,6 @@ const buildMessagePayload = ({ title, body, image, data, priority, sound }) => {
         priority: priority || "high",
         notification: {
             sound: sound || "default",
-            channelId: "default",
             notificationPriority: "PRIORITY_HIGH",
         }
     };
