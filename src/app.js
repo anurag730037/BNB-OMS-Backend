@@ -10,6 +10,7 @@ const categoryRoutes = require("./routes/category.routes");
 const subcategoryRoutes = require("./routes/subcategory.routes");
 const areaRoutes = require("./routes/area.routes");
 const supportRoutes = require("./routes/support.routes");
+const bannerRoutes = require("./routes/banner.routes");
 
 const app = express()
 
@@ -28,6 +29,7 @@ app.use("/api/product", productRoutes);
 app.use("/api/subcategory", subcategoryRoutes);
 app.use("/api/area", areaRoutes);
 app.use("/api/support", supportRoutes);
+app.use("/api/banners", bannerRoutes);
 
 app.get("/", (req, res) => {
     res.send("API Working");
